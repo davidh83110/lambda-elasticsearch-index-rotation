@@ -35,6 +35,12 @@ Example
     "region": "ap-northeast-1", 
     "older_than": "1",
     "exclude": ["testapi", "testaudit"]
+},
+{
+    "endpoint":"https://searchwewqewqewqewqewqefwe2.ap-northeast-1.es.amazonaws.com", 
+    "region": "us-west-1", 
+    "older_than": "1",
+    "exclude": [""]
 }
 ```
 
