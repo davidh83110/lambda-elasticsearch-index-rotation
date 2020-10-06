@@ -4,29 +4,14 @@ import requests
 import datetime
 
 
-def keep_suffix(older_than):
+def calculate_keep_suffix(older_than):
     today = datetime.date.today()
     keep_suffix = tuple((today - datetime.timedelta(days=o)).isoformat().replace('-', '.')
                             for o in range(0, older_than))
 
     return keep_suffix
 
-
-def lambda_handler(event, context):
-
-    endpoint = event.get('endpoint')
-    print('The endpoint is: ', endpoint)
-
-    region = event.get('region')
-    print('The region is: ', region)
-
-    older_than = int(event.get('older_than'))
-    print('The indices older than the date will be deleted: ', older_than)
-
-    exclude = event.get('exclude')
-    print('The indices contain in the list will not be deleted: ', exclude)
-
-
+def cleanup_indices(region, endpoint, keep_suffix, exclude):
     ## AWS Elasticsearch required signed requests.
     service = 'es'
     credentials = boto3.Session().get_credentials()
@@ -43,15 +28,35 @@ def lambda_handler(event, context):
             index_time = index.split('-')[-1]
 
             ## Find index which older than "older_than" days and not starts with ".".
-            if index_time not in keep_suffix(older_than) and not index.startswith('.'):
-
+            if index_time not in keep_suffix and not index.startswith('.'):
                 for ex_index in exclude:
-                    if ex_index not in index:
+                    if ex_index not in index or ex_index == '':
                         print('Going to delete index: ', index)
 
                         delete_res = requests.delete(endpoint+'/'+index, auth=awsauth)
                         print(delete_res)
 
     print('Older indices cleanup completed.')
+
+
+def lambda_handler(event, context):
+
+    for cluster in event:
+        endpoint = cluster.get('endpoint')
+        print('The endpoint is: ', endpoint)
+
+        region = cluster.get('region')
+        print('The region is: ', region)
+
+        older_than = int(cluster.get('older_than'))
+        print('The indices older than the date will be deleted: ', older_than)
+
+        exclude = cluster.get('exclude')
+        print('The indices contain in the list will not be deleted: ', exclude)
+
+        keep_suffix = calculate_keep_suffix(older_than)
+        
+        cleanup_indices(region, endpoint, keep_suffix, exclude)
+
 
     return 200
